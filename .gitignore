@@ -1,0 +1,15 @@
+.reference/
+.build/
+out/
+tmp/
+.lake/
+*.cbuild*.yml
+*.cbuild*.yaml
+*.cbuild*.json
+*.cbuild-pack.yml
+*.cbuild-idx.yml
+build/
+.cmsis/
+.clangd
+__pycache__/
+*.pyc

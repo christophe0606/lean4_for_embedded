@@ -1,0 +1,6 @@
+name = "hardware_contracts"
+version = "0.1.0"
+moreLeanArgs = ["-DwarningAsError=true"]
+
+[[lean_lib]]
+name = "HardwareContracts"

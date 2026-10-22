@@ -1,0 +1,14 @@
+{"version": "1.3.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"type": "path",
+   "scope": "",
+   "name": "hardware_contracts",
+   "manifestFile": "lake-manifest.json",
+   "inherited": false,
+   "dir": "examples/hardware-contracts",
+   "copy": false,
+   "configFile": "lakefile.toml"}],
+ "name": "lean_cmsis",
+ "lakeDir": ".lake",
+ "fixedToolchain": false}

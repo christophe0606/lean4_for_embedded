@@ -1,0 +1,15 @@
+name = "lean_cmsis"
+version = "0.1.0"
+moreLeanArgs = ["-DwarningAsError=true"]
+
+[[require]]
+name = "hardware_contracts"
+path = "examples/hardware-contracts"
+
+[[lean_lib]]
+name = "Smoke"
+srcDir = "examples/smoke"
+
+[[lean_lib]]
+name = "Console"
+srcDir = "examples/console"

@@ -1,0 +1,11 @@
+{
+    "targetSet": {
+        "LeanEmbedded": {
+            "activeTargetType": "Corstone300-CLANG",
+            "Corstone300-CLANG": 0,
+            "Corstone300-GCC": 0
+        }
+    },
+    "activeSolution": "../LeanEmbedded.csolution.yml",
+    "activeTarget": "Corstone300-CLANG@minimal"
+}
