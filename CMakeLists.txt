@@ -76,7 +76,7 @@ add_library(rtx STATIC ${RTX_C} "${RTX}/Source/GCC/irq_armv8mml.S"
 target_include_directories(rtx PUBLIC "${RTX}/Include" "${RTX}/Config" "${RTOS_API}" "${CORE}" "${BSP}/Device/Include" "${BSP}/Board/Platform")
 target_compile_definitions(rtx PRIVATE RTE_COMPONENTS_H CMSIS_device_header="SSE300MPS3.h" OS_DYNAMIC_MEM_SIZE=131072 OS_STACK_SIZE=16384 OS_TIMER_THREAD_STACK_SIZE=2048 OS_STACK_CHECK=1)
 target_compile_options(rtx PRIVATE -Os)
-add_executable(lean-smoke.elf examples/smoke/main.c examples/smoke/systick.c runtime/selftest.cpp board/Corstone300/start.c board/Corstone300/fault.c
+add_executable(lean-smoke.elf examples/smoke/main.c examples/smoke/systick.c examples/smoke/timer_sequence.c runtime/selftest.cpp board/Corstone300/start.c board/Corstone300/fault.c
   "${BSP}/Device/Source/startup_SSE300MPS3.c" "${BSP}/Device/Source/system_SSE300MPS3.c")
 target_include_directories(lean-smoke.elf PRIVATE "${UPSTREAM}" "${GEN}" "${BSP}/Device/Include" "${BSP}/Board/Platform" "${CORE}")
 target_compile_definitions(lean-smoke.elf PRIVATE __PROGRAM_START=embedded_start)

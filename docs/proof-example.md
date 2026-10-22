@@ -1,5 +1,7 @@
 # A proved SysTick reload contract
 
+For a second example with an induction proof over peripheral commands, see [Proving a peripheral initialization sequence](initialization-example.md).
+
 The small separate Lake package in `examples/hardware-contracts` defines `SysTickConfig period`. A value carries:
 
 1. A reload value below 16,777,216 (`Fin 16777216`).

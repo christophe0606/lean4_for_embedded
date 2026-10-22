@@ -7,6 +7,7 @@
 extern lean_object * lean_embedded_smoke(lean_object *);
 extern int lean_cmsis_selftest(void);
 extern int systick_contract_test(void);
+extern int timer_sequence_test(void);
 #ifdef LEAN_CONSOLE_EXAMPLE
 extern lean_object * lean_console_demo(lean_object * message);
 #endif
@@ -32,6 +33,7 @@ static int run_tests(void) {
     puts(ok ? "PASS: Lean Nat arithmetic (32-bit target, big result)" : "FAIL: Lean arithmetic");
     if (ok) lean_cmsis_selftest();
     if (ok && systick_contract_test() != 0) { puts("FAIL: SysTick contract"); ok = 0; }
+    if (ok && timer_sequence_test() != 0) { puts("FAIL: timer initialization sequence"); ok = 0; }
     fflush(stdout);
     return ok ? 0 : 1;
 }

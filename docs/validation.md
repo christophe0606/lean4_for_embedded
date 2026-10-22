@@ -13,10 +13,11 @@ The required checks are:
 - Promise resolution wakes a waiting caller. Three threads stress arbitrary-precision allocation/free. A contested C++ local static is constructed exactly once.
 - Upstream shared ST.Ref get/swap primitives work, RTX monotonic time progresses across a delay, and a native FPU/boxed Float round trip is checked.
 - The proved SysTick function passes seven boundary cases and actual FVP register readback.
+- The proved timer initialization validator checks all 256 four-command plans, twelve unknown-code cases, and seven period boundaries. The executor runs the valid plan on FVP SysTick and verifies that rejected plans leave its configuration unchanged; see [the sequence example](initialization-example.md).
 
-The optional Console profile additionally runs Lean-written `Task.spawn`/`Task.map`, `IO.sleep`, and `IO.println`; its eighth PASS marker confirms that normal Lean console code executed. Both Console images are also checked against their current ELF and FVP configuration hashes.
+The minimal profile requires eight PASS markers. The optional Console profile additionally runs Lean-written `Task.spawn`/`Task.map`, `IO.sleep`, and `IO.println`; its ninth PASS marker confirms that normal Lean console code executed. Both Console images are also checked against their current ELF and FVP configuration hashes.
 
-The host compiler and runtime source commit are pinned to `eb6cafb7290e8bd5f2937522d8d804f58f02bafc` (Lean 4.35.0). The target compiler versions are GCC 14.3.1 and ATfE 23.1.0. The selected Lean closure is five modules, listed in each target's `generated/modules.txt`.
+The host compiler and runtime source commit are pinned to `eb6cafb7290e8bd5f2937522d8d804f58f02bafc` (Lean 4.35.0). The target compiler versions are GCC 14.3.1 and ATfE 23.1.0. The selected minimal Lean closure is ten modules, listed in each target's `generated/modules.txt`.
 
 This verifies the model execution and listed behaviors, not physical board timing, worst-case interrupt latency, every runtime API, or GDB debugging on the old VM model. The runtime support table records those limits explicitly.
 
@@ -26,7 +27,7 @@ The final ELF build-artifact reports give these estimates (bytes):
 
 | Compiler | ROM (`text + data`) | RAM (`data + bss`, including reservations) |
 | --- | ---: | ---: |
-| GCC 14.3.1 | 448,548 | 359,320 |
-| ATfE 23.1.0 | 166,712 | 350,456 |
+| GCC 14.3.1 | 452,420 | 359,384 |
+| ATfE 23.1.0 | 172,392 | 350,512 |
 
-The RAM totals include the 128 KiB RTX pool, 192 KiB C heap, and 16 KiB MSP reservation. They are demonstration budgets, not a minimum live-heap requirement. Much of GCC's code footprint comes from its C++/C libraries; the minimal Lean module closure remains five modules. The optional standard-console profile has a larger dependency closure and uses a separate 1 MiB SRAM code region.
+The RAM totals include the 128 KiB RTX pool, 192 KiB C heap, and 16 KiB MSP reservation. They are demonstration budgets, not a minimum live-heap requirement. Much of GCC's code footprint comes from its C++/C libraries; the minimal Lean module closure is ten modules. The optional standard-console profile has a larger dependency closure and uses a separate 1 MiB SRAM code region.

@@ -17,6 +17,7 @@ markers = [
     'PASS: Promise wait/resolve, concurrent heap stress, C++ once guard',
     'PASS: upstream ST.Ref primitives + RTX monotonic clock',
     'PASS: proved SysTick contract + FVP register readback (7 boundaries)',
+    'PASS: proved timer initialization sequence + FVP MMIO (256 plans)',
 ]
 try:
     profiles = ('Debug', 'Console') if args.console else ('Debug',)
