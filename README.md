@@ -71,6 +71,40 @@ Add ordinary Lake dependencies in `lakefile.toml`. The included `hardware_contra
 
 C-facing exported functions use Lean's generated ABI. The generated `lean_app_init.h` selects the correct package-qualified runtime initializer; do not guess initializer names. The C harness shows initialization in a running RTX thread, module initialization, `lean_io_mark_end_initialization()`, and explicit task-manager lifetime.
 
+### C-to-Lean entry points
+
+The examples use C `main` as the application entry point. C calls the exported Lean functions; there is no Lean `main` in these examples. The startup path is:
+
+```text
+Reset_Handler → embedded_start() → C main()
+  → RTX app_thread() → run_tests() → exported Lean functions
+```
+
+See [start.c](board/Corstone300/start.c) and [main.c](examples/smoke/main.c). Before calling application functions, `run_tests()` initializes the Lean runtime, calls the generated `lean_app_initialize(1)` and checks/releases its result, then calls `lean_io_mark_end_initialization()`.
+
+The three minimal-example entry points are defined in [Smoke.lean](examples/smoke/Smoke.lean). The optional Console example adds a fourth in [Console.lean](examples/console/Console.lean):
+
+| Lean function | Exported C symbol | C caller |
+| --- | --- | --- |
+| `smoke` in `Smoke.lean` | `lean_embedded_smoke` | [main.c](examples/smoke/main.c) |
+| `sysTickReload` in `Smoke.lean` | `lean_embedded_systick_reload` | [systick.c](examples/smoke/systick.c) |
+| `timerSequence` in `Smoke.lean` | `lean_embedded_timer_sequence` | [timer_sequence.c](examples/smoke/timer_sequence.c) |
+| `greet` in `Console.lean` | `lean_console_demo` | [main.c](examples/smoke/main.c), Console profile |
+
+`@[export symbol_name]` assigns the callable C symbol. `@[expose] public section` makes the Lean definitions and their bodies available across modules; it does not select an entry point or assign those C symbols.
+
+For the initialization-sequence example, the call path is:
+
+```text
+C execute_plan()
+  → lean_embedded_timer_sequence(...)  [C symbol]
+  → timerSequence(...)                [Lean wrapper in Smoke.lean]
+  → HardwareContracts.TimerSequence.checkedReload(...)
+  → approve(...) → check(...) → next(...)
+```
+
+The reusable implementation and proofs live in [TimerSequence.lean](examples/hardware-contracts/HardwareContracts/TimerSequence.lean); the firmware-facing wrapper lives in `Smoke.lean`. Lean generates C that GCC or ATfE compiles into native Cortex-M55 instructions. Proofs are checked during the build and erased from the executable.
+
 ## What is implemented
 
 See [runtime design and capability limits](docs/runtime.md), [the proved SysTick reload](docs/proof-example.md), [the proved initialization sequence](docs/initialization-example.md), and [validation](docs/validation.md). This is a core runtime port for a single Cortex-M55, not a POSIX environment or an entire Lean compiler running on the MCU.

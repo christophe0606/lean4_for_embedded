@@ -31,6 +31,8 @@ Its proof uses induction on the command list. An empty plan makes no transition.
 
 ## Executing the plan
 
+The C entry point is exported by `timerSequence` in [Smoke.lean](../examples/smoke/Smoke.lean), using `@[export lean_embedded_timer_sequence]`. That wrapper calls `HardwareContracts.TimerSequence.checkedReload` in `TimerSequence.lean`. The `@[expose] public section` in the contract module does not define a C entry point. See [C-to-Lean entry points](../README.md#c-to-lean-entry-points) for the complete startup path and the other examples.
+
 The small C-facing demonstration accepts four command codes: `0 = stop`, `1 = configure`, `2 = clear`, `3 = enable`. For example:
 
 | Commands | Result |

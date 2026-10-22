@@ -12,7 +12,7 @@ The small separate Lake package in `examples/hardware-contracts` defines `SysTic
 
 This corresponds to actual hardware constraints. The Armv8-M Architecture Reference Manual, **DDI0553 B.z p.290**, specifies that a zero reload disables counting on the next wrap. **p.1859** specifies the 24-bit RELOAD field, reserved upper eight bits, privileged access, and word-only accesses. The Cortex-M55 TRM, **101051 r1p1 p.240**, lists SYST_RVR at `0xE000E014`. The architecture rules cited apply from Armv8.0-M onward, including this Armv8.1-M target.
 
-At the exported C boundary, `sysTickReload` returns zero to signal rejection. Accepted values use the proof-requiring `UInt32.ofNatLT`, so the conversion does not silently wrap the proved Nat value. The result is used by a C MMIO shim that only writes when the result is nonzero.
+At the exported C boundary, `sysTickReload` returns zero to signal rejection. Its wrapper in [Smoke.lean](../examples/smoke/Smoke.lean) exports the C symbol `lean_embedded_systick_reload`, called by [systick.c](../examples/smoke/systick.c). See [C-to-Lean entry points](../README.md#c-to-lean-entry-points) for startup and initialization. Accepted values use the proof-requiring `UInt32.ofNatLT`, so the conversion does not silently wrap the proved Nat value. The result is used by a C MMIO shim that only writes when the result is nonzero.
 
 The FVP test checks these seven periods:
 
