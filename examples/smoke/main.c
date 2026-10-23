@@ -43,6 +43,10 @@ static void app_thread(void * argument) {
     exit(run_tests());
 }
 int main(void) {
+#ifdef LEAN_BOARD_ALIF_E8
+    extern int board_stdio_init(void);
+    if (board_stdio_init() != 0) return 6;
+#endif
     if (osKernelInitialize() != osOK) return 2;
     const osThreadAttr_t attr = { .name = "lean-main", .stack_size = 32768 };
     if (!osThreadNew(app_thread, NULL, &attr)) return 3;

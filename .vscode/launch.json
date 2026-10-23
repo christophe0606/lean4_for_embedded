@@ -2,30 +2,37 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Arm-FVP@GDB (launch)",
+            "name": "M55_HP CMSIS_DAP@pyOCD (launch)",
             "type": "gdbtarget",
             "request": "launch",
             "cwd": "${workspaceFolder}/",
-            "program": "out/LeanEmbedded/Corstone300-CLANG/Debug/lean-smoke.elf",
+            "program": "out/LeanEmbedded/DevKit-E8/Console/lean-smoke.elf",
             "gdb": "arm-none-eabi-gdb",
-            "auxiliaryGdb": false,
+            "auxiliaryGdb": true,
+            "preLaunchTask": "CMSIS Load",
             "initCommands": [
-                "set remote verbose-resume-supported-packet off",
-                "set remote verbose-resume-packet off",
+                "monitor reset halt",
                 "tbreak main"
             ],
+            "customResetCommands": [
+                "monitor reset halt",
+                "maintenance flush register-cache",
+                "maintenance flush dcache",
+                "tbreak main",
+                "continue"
+            ],
             "target": {
-                "server": "${workspaceFolder}/scripts/fvp-model.py",
+                "server": "pyocd",
                 "serverParameters": [
-                    "-D",
-                    "--plugin",
-                    "${env:AVH_FVP_PLUGINS}/GDBServer.so",
-                    "-C",
-                    "GDBServer.port=3333",
-                    "-f",
-                    "board/Corstone300/fvp.cfg",
-                    "-a",
-                    "out/LeanEmbedded/Corstone300-CLANG/Debug/lean-smoke.elf"
+                    "gdbserver",
+                    "--probe",
+                    "cmsisdap:",
+                    "--persist",
+                    "--cbuild-run",
+                    "${command:cmsis-csolution.getCbuildRunFile}",
+                    "--quiet",
+                    "--log",
+                    "*.cbuild_run,*server=info"
                 ],
                 "port": "3333"
             },
@@ -35,19 +42,51 @@
             }
         },
         {
-            "name": "Arm-FVP@GDB (attach)",
+            "name": "M55_HP CMSIS_DAP@pyOCD (attach)",
             "type": "gdbtarget",
             "request": "attach",
             "cwd": "${workspaceFolder}/",
-            "program": "out/LeanEmbedded/Corstone300-CLANG/Debug/lean-smoke.elf",
+            "program": "out/LeanEmbedded/DevKit-E8/Console/lean-smoke.elf",
             "gdb": "arm-none-eabi-gdb",
-            "auxiliaryGdb": false,
+            "auxiliaryGdb": true,
             "initCommands": [
-                "set remote verbose-resume-supported-packet off",
-                "set remote verbose-resume-packet off"
+                ""
+            ],
+            "customResetCommands": [
+                "monitor reset halt",
+                "maintenance flush register-cache",
+                "maintenance flush dcache",
+                "tbreak main",
+                "continue"
             ],
             "target": {
                 "port": "3333"
+            },
+            "cmsis": {
+                "cbuildRunFile": "${command:cmsis-csolution.getCbuildRunFile}",
+                "updateConfiguration": "auto"
+            }
+        },
+        {
+            "name": "M55_HE CMSIS_DAP@pyOCD (attach)",
+            "type": "gdbtarget",
+            "request": "attach",
+            "cwd": "${workspaceFolder}/",
+            "program": "",
+            "gdb": "arm-none-eabi-gdb",
+            "auxiliaryGdb": true,
+            "initCommands": [
+                ""
+            ],
+            "customResetCommands": [
+                "monitor reset halt",
+                "maintenance flush register-cache",
+                "maintenance flush dcache",
+                "tbreak main",
+                "continue"
+            ],
+            "target": {
+                "port": "3334"
             },
             "cmsis": {
                 "cbuildRunFile": "${command:cmsis-csolution.getCbuildRunFile}",

@@ -1,0 +1,32 @@
+layer:
+  type: Board
+  description: Lean demo support for the DevKit-E8 M55_HP core
+  for-board: Alif Semiconductor::DevKit-E8
+  for-device: Alif Semiconductor::AE822FA0E5597LS0:M55_HP
+  device: :M55_HP
+  processor:
+    trustzone: off
+  packs:
+    - pack: AlifSemiconductor::Ensemble@2.2.1
+    - pack: ARM::CMSIS@6.3.0
+    - pack: ARM::CMSIS-RTX@5.9.1
+  connections:
+    - connect: DevKit-E8 UART4
+      provides:
+        - STDOUT
+        - STDERR
+        - Heap: 2097152
+  components:
+    - component: Device:Startup
+    - component: Device:SOC Peripherals:PINCONF
+    - component: CMSIS Driver:USART
+    - component: CMSIS:CORE
+  groups:
+    - group: Lean board runtime
+      files:
+        - file: ./start.c
+        - file: ./stdio.c
+        - file: ./memory.ld
+  # The native CMake project consumes this layer path and compiles the matching
+  # components directly from the installed packs. CMSIS-Toolbox 2.15 does not
+  # attach .clayer files to a native cmake: project.

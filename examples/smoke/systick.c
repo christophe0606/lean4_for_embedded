@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "cmsis_os2.h"
-#include "SSE300MPS3.h"
+#include "cmsis_device.h"
 extern uint32_t lean_embedded_systick_reload(uint32_t period);
 
 /* See arm/ddi0553-latest, B.z, pp.290 and 1859:
@@ -36,6 +36,6 @@ int systick_contract_test(void) {
     SysTick->CTRL = ctrl;
     __set_PRIMASK(primask);
     if (osKernelRestoreLock(lock) < 0) return 4;
-    if (!failed) puts("PASS: proved SysTick contract + FVP register readback (7 boundaries)");
+    if (!failed) puts("PASS: proved SysTick contract + register readback (7 boundaries)");
     return failed;
 }

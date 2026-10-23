@@ -26,11 +26,67 @@ if(NOT LEAN_HOST_COMMIT STREQUAL LEAN_PIN_COMMIT)
   message(FATAL_ERROR "Host Lean compiler and runtime sources must have the same commit")
 endif()
 set(UPSTREAM "${CMAKE_BINARY_DIR}/upstream")
-execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/prepare-runtime.py" "${LEAN_SOURCE_DIR}" "${UPSTREAM}" COMMAND_ERROR_IS_FATAL ANY)
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/prepare-runtime.py" "${LEAN_SOURCE_DIR}" "${UPSTREAM}"
+  RESULT_VARIABLE PREPARE_RUNTIME_STATUS ERROR_VARIABLE PREPARE_RUNTIME_ERROR)
+if(NOT PREPARE_RUNTIME_STATUS EQUAL 0)
+  string(REPLACE "\n" " | " PREPARE_RUNTIME_MESSAGE "${PREPARE_RUNTIME_ERROR}")
+  message(FATAL_ERROR "prepare-runtime.py failed: ${PREPARE_RUNTIME_MESSAGE}")
+endif()
 file(WRITE "${UPSTREAM}/githash.h" "#define LEAN_GITHASH \"eb6cafb7290e8bd5f2937522d8d804f58f02bafc\"\n")
 execute_process(COMMAND "${LEAN_EXECUTABLE}" --print-prefix WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}" OUTPUT_VARIABLE LEAN_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 configure_file("${LEAN_PREFIX}/include/lean/version.h" "${UPSTREAM}/include/lean/version.h" COPYONLY)
-set(BSP "${CMSIS_PACK_ROOT}/ARM/V2M_MPS3_SSE_300_BSP/1.4.0")
+set(LEAN_BOARD "Corstone300" CACHE STRING "Firmware board")
+if(LEAN_BOARD STREQUAL "DevKit-E8")
+  set(BSP "${CMSIS_PACK_ROOT}/AlifSemiconductor/Ensemble/2.2.1")
+  set(BOARD_DIR "${CMAKE_SOURCE_DIR}/board/DevKit-E8")
+  set(BOARD_RTE "${BOARD_DIR}/RTE/Device/AE822FA0E5597LS0_M55_HP")
+  if(NOT IS_ABSOLUTE "${LEAN_BOARD_LAYER}")
+    set(LEAN_BOARD_LAYER "${CMAKE_SOURCE_DIR}/${LEAN_BOARD_LAYER}")
+  endif()
+  if(NOT EXISTS "${BSP}/AlifSemiconductor.Ensemble.pdsc")
+    message(FATAL_ERROR "AlifSemiconductor::Ensemble@2.2.1 is required")
+  endif()
+  if(NOT EXISTS "${LEAN_BOARD_LAYER}")
+    message(FATAL_ERROR "DevKit-E8 requires an existing -DLEAN_BOARD_LAYER path")
+  endif()
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${LEAN_BOARD_LAYER}")
+  set(BOARD_INCLUDES
+    "${BOARD_DIR}"
+    "${BSP}/Device/core/common/include"
+    "${BSP}/Device/system/include"
+    "${BSP}/Device/soc/AE822FA0E5597/include"
+    "${BSP}/Device/soc/AE822FA0E5597/include/rtss_hp"
+    "${BSP}/drivers/include"
+    "${BSP}/Alif_CMSIS/Include"
+    "${BSP}/Alif_CMSIS/Source"
+    "${CMSIS_PACK_ROOT}/ARM/CMSIS/6.3.0/CMSIS/Driver/Include"
+    "${BOARD_RTE}")
+  set(BOARD_SOURCES
+    "${BOARD_DIR}/start.c" "${BOARD_DIR}/stdio.c"
+    "${BSP}/Device/core/common/source/startup.c"
+    "${BSP}/Device/core/common/source/system.c"
+    "${BSP}/Device/core/common/source/vectors.c"
+    "${BSP}/Device/core/common/source/tgu.c"
+    "${BSP}/Device/core/common/source/sau_tcm_ns_setup.c"
+    "${BSP}/Device/core/common/source/mpu.c"
+    "${BSP}/Device/core/common/source/cache.c"
+    "${BSP}/Device/core/common/source/pm.c"
+    "${BSP}/Device/system/source/sys_clocks.c"
+    "${BSP}/Device/system/source/sys_utils.c"
+    "${BSP}/Alif_CMSIS/Source/Driver_USART.c"
+    "${BSP}/drivers/source/uart.c"
+    "${BSP}/drivers/source/pinconf.c")
+  set(BOARD_DEFINES LEAN_BOARD_ALIF_E8 RTSS_HP ENSEMBLE_SOC_GEN2 AE822FA0E5597LS0 RTE_Drivers_USART CMSIS_device_header="alif.h")
+  set(BOARD_DEVICE_HEADER "alif.h")
+elseif(LEAN_BOARD STREQUAL "Corstone300")
+  set(BSP "${CMSIS_PACK_ROOT}/ARM/V2M_MPS3_SSE_300_BSP/1.4.0")
+  set(BOARD_INCLUDES "${BSP}/Device/Include" "${BSP}/Board/Platform")
+  set(BOARD_SOURCES board/Corstone300/start.c board/Corstone300/fault.c
+    "${BSP}/Device/Source/startup_SSE300MPS3.c" "${BSP}/Device/Source/system_SSE300MPS3.c")
+  set(BOARD_DEVICE_HEADER "SSE300MPS3.h")
+else()
+  message(FATAL_ERROR "Unsupported LEAN_BOARD=${LEAN_BOARD}")
+endif()
 set(CORE "${CMSIS_PACK_ROOT}/ARM/CMSIS/6.3.0/CMSIS/Core/Include")
 set(RTX "${CMSIS_PACK_ROOT}/ARM/CMSIS-RTX/5.9.1")
 set(RTOS_API "${CMSIS_PACK_ROOT}/ARM/CMSIS/6.3.0/CMSIS/RTOS2/Include")
@@ -39,8 +95,8 @@ foreach(name IN LISTS RUNTIME_SOURCES)
   list(APPEND RUNTIME_FILES "${UPSTREAM}/runtime/${name}.cpp")
 endforeach()
 add_library(leanrt STATIC ${RUNTIME_FILES} runtime/platform.cpp runtime/cmsis_thread.cpp runtime/cmsis_tls.cpp runtime/cmsis_tp.S runtime/cmsis_libc.cpp runtime/cmsis_console.cpp)
-target_include_directories(leanrt PUBLIC runtime/include "${UPSTREAM}/include" PRIVATE "${UPSTREAM}" PUBLIC runtime "${RTOS_API}" "${BSP}/Device/Include" "${BSP}/Board/Platform" "${CORE}")
-target_compile_definitions(leanrt PUBLIC LEAN_CMSIS LEAN_MULTI_THREAD PRIVATE LEAN_DEFAULT_THREAD_STACK_SIZE=16384 LEAN_STACK_BUFFER_SPACE=1024 LEAN_BUILD_TYPE=Release)
+target_include_directories(leanrt PUBLIC runtime/include "${UPSTREAM}/include" PRIVATE "${UPSTREAM}" PUBLIC runtime "${RTOS_API}" ${BOARD_INCLUDES} "${CORE}")
+target_compile_definitions(leanrt PUBLIC LEAN_CMSIS LEAN_MULTI_THREAD ${BOARD_DEFINES} PRIVATE LEAN_DEFAULT_THREAD_STACK_SIZE=16384 LEAN_STACK_BUFFER_SPACE=1024 LEAN_BUILD_TYPE=Release)
 target_link_options(leanrt INTERFACE -Wl,-u,__retarget_lock_acquire,-u,__cxa_guard_acquire)
 target_compile_options(leanrt PRIVATE -Os -Wno-unused-parameter)
 set(GEN "${CMAKE_BINARY_DIR}/generated")
@@ -73,13 +129,12 @@ target_compile_options(lean_app PRIVATE -Os)
 file(GLOB RTX_C CONFIGURE_DEPENDS "${RTX}/Source/rtx_*.c")
 add_library(rtx STATIC ${RTX_C} "${RTX}/Source/GCC/irq_armv8mml.S"
   "${RTX}/Config/RTX_Config.c" "${CMSIS_PACK_ROOT}/ARM/CMSIS/6.3.0/CMSIS/RTOS2/Source/os_systick.c")
-target_include_directories(rtx PUBLIC "${RTX}/Include" "${RTX}/Config" "${RTOS_API}" "${CORE}" "${BSP}/Device/Include" "${BSP}/Board/Platform")
-target_compile_definitions(rtx PRIVATE RTE_COMPONENTS_H CMSIS_device_header="SSE300MPS3.h" OS_DYNAMIC_MEM_SIZE=131072 OS_STACK_SIZE=16384 OS_TIMER_THREAD_STACK_SIZE=2048 OS_STACK_CHECK=1)
+target_include_directories(rtx PUBLIC "${RTX}/Include" "${RTX}/Config" "${RTOS_API}" "${CORE}" ${BOARD_INCLUDES})
+target_compile_definitions(rtx PRIVATE RTE_COMPONENTS_H CMSIS_device_header="${BOARD_DEVICE_HEADER}" ${BOARD_DEFINES} OS_DYNAMIC_MEM_SIZE=131072 OS_STACK_SIZE=16384 OS_TIMER_THREAD_STACK_SIZE=2048 OS_STACK_CHECK=1)
 target_compile_options(rtx PRIVATE -Os)
-add_executable(lean-smoke.elf examples/smoke/main.c examples/smoke/systick.c examples/smoke/timer_sequence.c runtime/selftest.cpp board/Corstone300/start.c board/Corstone300/fault.c
-  "${BSP}/Device/Source/startup_SSE300MPS3.c" "${BSP}/Device/Source/system_SSE300MPS3.c")
-target_include_directories(lean-smoke.elf PRIVATE "${UPSTREAM}" "${GEN}" "${BSP}/Device/Include" "${BSP}/Board/Platform" "${CORE}")
-target_compile_definitions(lean-smoke.elf PRIVATE __PROGRAM_START=embedded_start)
+add_executable(lean-smoke.elf examples/smoke/main.c examples/smoke/systick.c examples/smoke/timer_sequence.c runtime/selftest.cpp ${BOARD_SOURCES})
+target_include_directories(lean-smoke.elf PRIVATE "${UPSTREAM}" "${GEN}" ${BOARD_INCLUDES} "${CORE}")
+target_compile_definitions(lean-smoke.elf PRIVATE __PROGRAM_START=embedded_start ${BOARD_DEFINES})
 if(LEAN_PROFILE STREQUAL "Console")
   target_compile_definitions(lean-smoke.elf PRIVATE LEAN_CONSOLE_EXAMPLE)
 endif()
@@ -87,12 +142,16 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   target_compile_options(leanrt PUBLIC -fpermitted-flt-eval-methods=c11)
 endif()
 target_link_libraries(lean-smoke.elf PRIVATE lean_app leanrt rtx)
-if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+if(LEAN_BOARD STREQUAL "DevKit-E8")
+  target_link_options(lean-smoke.elf PRIVATE --specs=nosys.specs)
+elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   target_link_options(lean-smoke.elf PRIVATE --specs=rdimon.specs)
 else()
   target_link_libraries(lean-smoke.elf PRIVATE semihost)
 endif()
-if(LEAN_PROFILE STREQUAL "Console")
+if(LEAN_BOARD STREQUAL "DevKit-E8")
+  set(LEAN_LINKER_SCRIPT "${BOARD_DIR}/memory.ld")
+elseif(LEAN_PROFILE STREQUAL "Console")
   set(LEAN_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/board/Corstone300/memory-console.ld")
 else()
   set(LEAN_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/board/Corstone300/memory.ld")

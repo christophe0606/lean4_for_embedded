@@ -7,7 +7,7 @@ import difflib
 import json
 import subprocess
 root = pathlib.Path(__file__).resolve().parent.parent
-pin = json.loads((root / 'upstream.json').read_text())
+pin = json.loads((root / 'upstream.json').read_text(encoding='utf-8'))
 commit = subprocess.check_output(['git', '-C', str(src), 'rev-parse', 'HEAD'], text=True).strip()
 if commit != pin['commit']:
     sys.exit('error: upstream Lean revision does not match upstream.json')
@@ -18,7 +18,7 @@ for folder in ('runtime', 'util', 'include'):
     for source in (src / 'src' / folder).rglob('*'):
         if source.is_file():
             relative = source.relative_to(src / 'src')
-            original[relative] = source.read_text()
+            original[relative] = source.read_text(encoding='utf-8')
 contents.update(original)
 
 def read(path):
@@ -81,7 +81,7 @@ s = s.replace(old, 'void invoke_debugger() {\n#if defined(LEAN_CMSIS)\n    debug
 write(p, s)
 # Keep platform-independent IO primitives verbatim from the pinned upstream file.
 # Desktop files/processes/libuv are separate capabilities, not successful stubs.
-s = (src / 'src/runtime/io.cpp').read_text()
+s = (src / 'src/runtime/io.cpp').read_text(encoding='utf-8')
 start = s.index('// ST ref primitives')
 end = s.index('\nvoid initialize_io()')
 clock_start = s.index('/* monoMsNow : BaseIO Nat */')
@@ -106,15 +106,15 @@ diff = []
 for relative, value in contents.items():
     path = dst / relative
     path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists() or path.read_text() != value:
-        path.write_text(value)
+    if not path.exists() or path.read_text(encoding='utf-8') != value:
+        path.write_text(value, encoding='utf-8')
     if relative in original and value != original[relative]:
         diff.extend(difflib.unified_diff(original[relative].splitlines(True), value.splitlines(True),
           fromfile='a/src/' + str(relative), tofile='b/src/' + str(relative)))
 patch = ''.join(diff)
-(dst / 'changes.patch').write_text(patch)
+(dst / 'changes.patch').write_text(patch, encoding='utf-8')
 # Optional standard-console support keeps upstream stream TLS and handle code.
-io = (src / 'src/runtime/io.cpp').read_text()
+io = (src / 'src/runtime/io.cpp').read_text(encoding='utf-8')
 stream_start = io.index('static lean_external_class * g_io_handle_external_class')
 stream_end = io.index('/* Translates a CRT', stream_start)
 streams = io[stream_start:stream_end]
@@ -137,5 +137,5 @@ initializer = initializer[:a] + '}\n'
 console = prefix.replace('#include <lean/lean.h>', '#include <lean/lean.h>\n#include <cstdio>\n#include <cerrno>\n#include <unistd.h>')
 console += 'void ensure_console();\n' + streams + handles + initializer + '\n}\n'
 p = dst / 'runtime/cmsis_console_io.cpp'
-if not p.exists() or p.read_text() != console:
-    p.write_text(console)
+if not p.exists() or p.read_text(encoding='utf-8') != console:
+    p.write_text(console, encoding='utf-8')

@@ -2,6 +2,7 @@ solution:
   created-for: CMSIS-Toolbox@2.15.0
   packs:
     - pack: ARM::V2M_MPS3_SSE_300_BSP@1.4.0
+    - pack: AlifSemiconductor::Ensemble@2.2.1
     - pack: ARM::CMSIS@6.3.0
     - pack: ARM::CMSIS-RTX@5.9.1
   target-types:
@@ -43,6 +44,27 @@ solution:
             name: Arm-FVP
             model: ${workspaceFolder}/scripts/fvp-model.py
             config-file: board/Corstone300/fvp.cfg
+    - type: DevKit-E8
+      compiler: GCC@14.3.1
+      board: Alif Semiconductor::DevKit-E8
+      device: Alif Semiconductor::AE822FA0E5597LS0:M55_HP
+      variables:
+        - Board-Layer: $SolutionDir()$/board/DevKit-E8/Board.clayer.yml
+      target-set:
+        - set: minimal
+          images:
+            - project-context: LeanEmbedded.Debug
+          debugger:
+            name: ULINKplus@pyOCD
+            clock: 10000000
+            protocol: swd
+        - set: console
+          images:
+            - project-context: LeanEmbedded.Console
+          debugger:
+            name: ULINKplus@pyOCD
+            clock: 10000000
+            protocol: swd
   build-types:
     - type: Debug
       debug: on
@@ -89,3 +111,29 @@ solution:
           - image: lean-smoke.elf
             type: elf
       for-context: .Console+Corstone300-CLANG
+    - cmake:
+        project-id: LeanEmbedded
+        source: .
+        device: :M55_HP
+        configure:
+          - -DLEAN_PROFILE=Debug
+          - -DLEAN_BOARD=DevKit-E8
+          - -DLEAN_BOARD_LAYER=board/DevKit-E8/Board.clayer.yml
+          - -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi.cmake
+        images:
+          - image: lean-smoke.elf
+            type: elf
+      for-context: .Debug+DevKit-E8
+    - cmake:
+        project-id: LeanEmbedded
+        source: .
+        device: :M55_HP
+        configure:
+          - -DLEAN_PROFILE=Console
+          - -DLEAN_BOARD=DevKit-E8
+          - -DLEAN_BOARD_LAYER=board/DevKit-E8/Board.clayer.yml
+          - -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi.cmake
+        images:
+          - image: lean-smoke.elf
+            type: elf
+      for-context: .Console+DevKit-E8

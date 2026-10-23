@@ -113,7 +113,7 @@ void this_thread::sleep_for(std::chrono::milliseconds delay) {
 }
 }
 
-#include "SSE300MPS3.h"
+#include "cmsis_device.h"
 namespace lean {
 cmsis_clock::time_point cmsis_clock::now() {
     static uint32_t previous;

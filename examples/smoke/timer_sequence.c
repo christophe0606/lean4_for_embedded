@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "cmsis_os2.h"
-#include "SSE300MPS3.h"
+#include "cmsis_device.h"
 
 extern uint32_t lean_embedded_timer_sequence(uint32_t period, uint32_t a,
                                             uint32_t b, uint32_t c, uint32_t d);
@@ -98,6 +98,6 @@ int timer_sequence_test(void) {
     __DSB();
     __set_PRIMASK(primask);
     if (osKernelRestoreLock(lock) < 0) return 8;
-    if (!failed) puts("PASS: proved timer initialization sequence + FVP MMIO (256 plans)");
+    if (!failed) puts("PASS: proved timer initialization sequence + MMIO (256 plans)");
     return failed;
 }

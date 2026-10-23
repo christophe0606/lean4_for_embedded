@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 #include "cmsis_os2.h"
-#include "SSE300MPS3.h"
+#include "cmsis_device.h"
 
 namespace {
 struct emutls_control { size_t size, align; void * location; const void * initial; };

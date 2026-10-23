@@ -1,11 +1,12 @@
 # Lean 4 on Cortex-M55 / CMSIS-RTX
 
-Cross-compile Lean applications with the **stock Lean 4.35.0 compiler and Lake**, then run them on the headless Corstone-300 FVP. Both CMSIS compiler selections are supported and tested:
+Cross-compile Lean applications with the **stock Lean 4.35.0 compiler and Lake**, then run them on the headless Corstone-300 FVP or an Alif DevKit-E8. The FVP compiler selections are supported and tested:
 
 | CMSIS target | C/C++ toolchain | C/C++ libraries |
 | --- | --- | --- |
 | `Corstone300-GCC` | GCC 14.3.1 | newlib / libstdc++ |
 | `Corstone300-CLANG` | Arm Toolchain for Embedded (ATfE) 23.1.0 | picolibc / libc++ |
+| `DevKit-E8` | GCC 14.3.1 | newlib / libstdc++ |
 
 The Lean compiler is not rebuilt. The runtime comes from the exact matching upstream commit in [upstream.json](upstream.json). Threading stays enabled: the upstream task scheduler runs on real RTX threads, with per-thread runtime state, blocking synchronization, and thread finalization.
 
@@ -47,6 +48,14 @@ python3 scripts/verify-evidence.py --console
 ```
 
 Standard-module generated C is cached under `.build/lean-c/<commit>` and reused across compilers. No host library archive is linked into the target.
+
+## Alif DevKit-E8
+
+Select `DevKit-E8@minimal` or `DevKit-E8@console` in the CMSIS Solution view. Both use the M55_HP core of the `AE822FA0E5597LS0` device on the DevKit-E8 A1 board and `AlifSemiconductor::Ensemble@2.2.1`. The board files and pack-derived configuration are in [board/DevKit-E8](board/DevKit-E8). The native CMake image consumes that board selection and builds the Alif startup, UART4 driver, and RTX from their installed packs. CMSIS-Toolbox 2.15 does not process a `.clayer.yml` as a component graph for a native `cmake:` project, so the CMake board source list mirrors this layer.
+
+The HP image links at MRAM `0x80200000`; its RAM allocations use SRAM0 `0x02000000` to `0x023fffff`. Before loading, provision the board's application table of contents (ATOC) for M55_HP using the Alif Security Toolkit. Select the connected `ULINKplus@pyOCD` debugger in CMSIS View, build, then use **Load & Debug** or **Load & Run**. The pack supplies the MRAM flash algorithm.
+
+For output, power the board through **PRG USB** and move SW4 to **UART4** with power off. Open the resulting serial port at **115200 8N1** before running the image. The minimal profile prints the eight PASS markers; the console profile additionally exercises stock Lean `IO.println`. The UART selection and ATOC setup follow the Alif E8 DevKit User Guide (AUGD0023 v1.2, pp. 3-7).
 
 ## Develop a Lean application
 

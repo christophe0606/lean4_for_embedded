@@ -1,5 +1,5 @@
 #include "cmsis_os2.h"
-#include "SSE300MPS3.h"
+#include "cmsis_device.h"
 #include <cstdint>
 #include <cstdlib>
 extern "C" {
