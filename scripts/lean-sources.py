@@ -27,7 +27,7 @@ pin = json.loads((a.root / 'upstream.json').read_text(encoding='utf-8'))
 shared_c = a.root / '.build/lean-c' / pin['commit']
 
 def command(args):
-    result = subprocess.run(args, cwd=a.root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(args, cwd=a.root, text=True, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode:
         raise RuntimeError(' | '.join(line for line in (result.stdout + result.stderr).splitlines() if 'error:' in line) or 'Lean generation failed')
     if result.stderr:

@@ -3,6 +3,7 @@
 #include "runtime/thread.h"
 #include "runtime/alloc.h"
 #include "runtime/interrupt.h"
+#include "runtime/mpz.h"
 #include "runtime/object.h"
 #include <cstdio>
 #include <stdexcept>
@@ -40,6 +41,12 @@ unsigned guarded() { static guarded_value value; return value.value; }
 void require(bool value, const char * message) { if (!value) lean::cmsis_fail(message); }
 }
 extern "C" int lean_cmsis_selftest() {
+    require(lean::mpz(0).to_string() == "0", "mpz zero decimal formatting");
+    require(lean::mpz("184467440737095516170000").to_string() == "184467440737095516170000",
+            "mpz positive decimal formatting");
+    require(lean::mpz("-184467440737095516170000").to_string() == "-184467440737095516170000",
+            "mpz negative decimal formatting");
+    puts("PASS: Lean big integer decimal formatting without iostream");
     main_thread = osThreadGetId();
     lean_init_task_manager_using(2);
     lean_object * tasks[24];

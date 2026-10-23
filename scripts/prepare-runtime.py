@@ -27,6 +27,12 @@ def read(path):
 def write(path, text):
     contents[path.relative_to(dst)] = text
 
+def replace_checked(relative, old, new):
+    path = dst / relative
+    text = read(path)
+    assert text.count(old) == 1, f'unexpected upstream content in {relative}'
+    write(path, text.replace(old, new))
+
 p = dst / 'runtime/thread.cpp'
 s = read(p)
 old = '#else\n#include <pthread.h>\n#endif'
@@ -73,11 +79,99 @@ write(p, s)
 p = dst / 'runtime/object.cpp'
 s = read(p).replace('std::chrono::steady_clock', 'lean::cmsis_clock')
 write(p, s)
+# Firmware uses C stdio for diagnostics. In particular, merely including
+# <iostream> initializes global C++ streams and pulls locale facets into MRAM.
+for relative in ('runtime/debug.h', 'runtime/thread.h', 'runtime/mpz.h',
+                 'runtime/stackinfo.cpp', 'runtime/thread.cpp'):
+    replace_checked(relative, '#include <iostream>\n', '')
+replace_checked('runtime/thread.cpp', '#include "runtime/sstream.h"\n', '')
+
 p = dst / 'runtime/debug.cpp'
 s = read(p)
-old = 'void invoke_debugger() {\n#if defined(LEAN_EMSCRIPTEN)'
+old = '#include <iostream>\n#include <sstream>\n'
 assert s.count(old) == 1
-s = s.replace(old, 'void invoke_debugger() {\n#if defined(LEAN_CMSIS)\n    debuggable_exit(); // No host processes or interactive console on firmware.\n#elif defined(LEAN_EMSCRIPTEN)')
+s = s.replace(old, '#include <cstdio>\n')
+old = '''    std::cerr << "LEAN ASSERTION VIOLATION\\n";
+    std::cerr << "File: " << fileName << "\\n";
+    std::cerr << "Line: " << line << "\\n";
+    std::cerr << condition << "\\n";
+    std::cerr.flush();'''
+assert s.count(old) == 1
+s = s.replace(old, '''    std::fprintf(stderr, "LEAN ASSERTION VIOLATION\\nFile: %s\\nLine: %d\\n%s\\n",
+                 fileName, line, condition);
+    std::fflush(stderr);''')
+start = s.index('void invoke_debugger() {')
+end = s.index('// LCOV_EXCL_STOP', start)
+s = s[:start] + 'void invoke_debugger() {\n    debuggable_exit();\n}\n' + s[end:]
+write(p, s)
+
+replace_checked('runtime/object.cpp', '#include <cmath>\n',
+                '#include <cmath>\n#include <cstdio>\n')
+replace_checked('runtime/object.cpp',
+                '        std::cerr.write(line, size) << "\\n";',
+                '        std::fwrite(line, 1, size, stderr);\n        std::fputc(\'\\n\', stderr);')
+
+# The firmware's non-GMP integer backend already produces decimal digits.
+# Build a string from those digits instead of routing it through ostream.
+replace_checked('runtime/mpz.h',
+                '    LEAN_EXPORT friend std::ostream & operator<<(std::ostream & out, mpz const & v);\n', '')
+p = dst / 'runtime/mpz.cpp'
+s = read(p)
+assert s.count('#include "runtime/sstream.h"\n') == 1
+s = s.replace('#include "runtime/sstream.h"\n', '#include <cstdio>\n')
+start = s.index('void display(std::ostream & out, __mpz_struct const * v) {')
+end = s.index('\n#else\n/***** NON GMP VERSION', start)
+s = s[:start] + s[end:]
+start = s.index('std::ostream & operator<<(std::ostream & out, mpz const & v) {')
+end = s.index('\n#endif\n\n\nstd::string mpz::to_string()', start)
+s = s[:start] + s[end:]
+start = s.index('std::string mpz::to_string() const {')
+end = s.index('\n}', start) + 2
+s = s[:start] + '''std::string mpz::to_string() const {
+#ifdef LEAN_USE_GMP
+    std::string result(mpz_sizeinbase(m_val, 10) + 2, '\\0');
+    mpz_get_str(result.data(), 10, m_val);
+    result.resize(std::strlen(result.c_str()));
+    return result;
+#else
+    buffer<char, 1024> digits;
+    digits.resize(11 * m_size, 0);
+    char const * text = mpn_to_string(m_digits, m_size, digits.begin(), digits.size());
+    return m_sign ? std::string("-") + text : std::string(text);
+#endif
+}''' + s[end:]
+old = 'void print(lean::mpz const & n) { std::cout << n << std::endl; }'
+assert s.count(old) == 1
+s = s.replace(old, 'void print(lean::mpz const & n) { std::printf("%s\\n", n.to_string().c_str()); }')
+write(p, s)
+
+# Only the desktop runtime needs the stream-based exception constructor.
+replace_checked('runtime/exception.h', 'class sstream;\n', '')
+replace_checked('runtime/exception.h', '    throwable(sstream const & strm);\n', '')
+replace_checked('runtime/exception.h', '    exception(sstream const & strm):throwable(strm) {}\n', '')
+p = dst / 'runtime/exception.cpp'
+s = read(p)
+assert s.count('#include <sstream>\n') == 1
+assert s.count('#include "runtime/sstream.h"\n') == 1
+assert s.count('throwable::throwable(sstream const & strm):m_msg(strm.str()) {}\n') == 1
+s = s.replace('#include <sstream>\n', '').replace('#include "runtime/sstream.h"\n', '')
+s = s.replace('throwable::throwable(sstream const & strm):m_msg(strm.str()) {}\n', '')
+start = s.index('stack_space_exception::stack_space_exception(char const * component_name):')
+end = s.index('char const * heartbeat_exception::what()', start)
+s = s[:start] + '''stack_space_exception::stack_space_exception(char const * component_name):
+    m_msg(std::string("deep recursion was detected at '") + component_name +
+          "' (potential solution: increase elaboration stack size using the `lean --tstack` flag). "
+          "This flag can be set in the `weakLeanArgs` field of the Lake configuration. "
+          "Further details are available in the Lean reference manual at " + LEAN_MANUAL_ROOT +
+          "find/?domain=Verso.Genre.Manual.section&name=lake-config-toml") {
+}
+
+memory_exception::memory_exception(char const * component_name):
+    m_msg(std::string("excessive memory consumption detected at '") + component_name +
+          "' (potential solution: increase memory consumption threshold)") {
+}
+
+''' + s[end:]
 write(p, s)
 # Keep platform-independent IO primitives verbatim from the pinned upstream file.
 # Desktop files/processes/libuv are separate capabilities, not successful stubs.

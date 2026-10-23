@@ -5,7 +5,6 @@
 #include "lean_app_init.h"
 
 extern int board_stdio_init(void);
-extern int blinky_events_init(void);
 extern lean_object *lean_blinky_run(void);
 
 static void app_thread(void *argument) {
@@ -31,7 +30,6 @@ static void app_thread(void *argument) {
 int main(void) {
     if (board_stdio_init() != 0) return 1;
     if (osKernelInitialize() != osOK) return 2;
-    if (blinky_events_init() != 0) return 3;
     const osThreadAttr_t attr = { .name = "blinky-boot", .stack_size = 32768 };
     if (!osThreadNew(app_thread, NULL, &attr)) return 4;
     if (osKernelStart() != osOK) return 5;

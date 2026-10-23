@@ -17,6 +17,9 @@ The arithmetic, allocation/reference-counting algorithms, strings, arrays, closu
 - Using the CMSIS monotonic clock for task-wait profiling.
 - Replacing unavailable C++ atomic wait/notify with an atomic retry loop on the single core.
 - Excluding POSIX signal-stack fields and terminating failed assertions without spawning a desktop debugger.
+- Replacing the firmware's C++ stream diagnostics and integer formatting with C stdio and direct decimal conversion. The desktop-only allocation profiler is not compiled into the firmware.
+
+The prepared runtime contains no active iostream dependency in the firmware build. The pinned `.reference/lean4` checkout remains clean. The DevKit-E8 Blinky GCC image shrank from 597,384 to 297,396 bytes of MRAM use (299,988 bytes, or 50.2%). Its retained `libstdc++` contribution fell from 264,726 to 44,298 bytes. These measurements are for `DevKit-E8@blinky` in the Debug configuration; the ELF file still contains DWARF information. The on-board minimal smoke suite verifies big-integer decimal formatting for zero, positive, and negative values after the change.
 
 The optional console stream/handle implementation, and the platform-independent ST/reference and BaseIO task primitives, are extracted directly from upstream `runtime/io.cpp`; the time primitives use the CMSIS clock. Console stream initialization is lazy so the core does not pull in `Init.System.IO`; error reporting uses the real `IO.Error.otherError` constructor with the C error number and message, without a libuv dependency. This avoids forking all of the desktop IO implementation.
 

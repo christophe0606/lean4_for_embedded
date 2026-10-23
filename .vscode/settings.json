@@ -8,5 +8,8 @@
   "memory-inspector.addressPadding": "32bit",
   "memory-inspector.groupings.groupsPerRow": "Autofit",
   "memory-inspector.groupings.MAUsPerGroup": 4,
-  "memory-inspector.scrollingBehavior": "Auto-Append"
+  "memory-inspector.scrollingBehavior": "Auto-Append",
+  "clangd.arguments": [
+    "--compile-commands-dir=c:\\Users\\chrfav01\\benchresults\\lean4_for_embedded\\out\\LeanBlinky\\DevKit-E8\\Debug"
+  ]
 }
