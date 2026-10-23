@@ -51,6 +51,8 @@ Standard-module generated C is cached under `.build/lean-c/<commit>` and reused 
 
 ## Alif DevKit-E8
 
+The standalone Lean RGB Blinky project is described in [docs/blinky.md](docs/blinky.md). Select `DevKit-E8@blinky` to build and run only that example.
+
 Select `DevKit-E8@minimal` or `DevKit-E8@console` in the CMSIS Solution view. Both use the M55_HP core of the `AE822FA0E5597LS0` device on the DevKit-E8 A1 board and `AlifSemiconductor::Ensemble@2.2.1`. The board files and pack-derived configuration are in [board/DevKit-E8](board/DevKit-E8). The native CMake image consumes that board selection and builds the Alif startup, UART4 driver, and RTX from their installed packs. CMSIS-Toolbox 2.15 does not process a `.clayer.yml` as a component graph for a native `cmake:` project, so the CMake board source list mirrors this layer.
 
 The HP image links at MRAM `0x80200000`; its RAM allocations use SRAM0 `0x02000000` to `0x023fffff`. Before loading, provision the board's application table of contents (ATOC) for M55_HP using the Alif Security Toolkit. Select the connected `ULINKplus@pyOCD` debugger in CMSIS View, build, then use **Load & Debug** or **Load & Run**. The pack supplies the MRAM flash algorithm.

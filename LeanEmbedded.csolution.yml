@@ -65,6 +65,13 @@ solution:
             name: ULINKplus@pyOCD
             clock: 10000000
             protocol: swd
+        - set: blinky
+          images:
+            - project-context: LeanBlinky.Debug
+          debugger:
+            name: ULINKplus@pyOCD
+            clock: 10000000
+            protocol: swd
   build-types:
     - type: Debug
       debug: on
@@ -137,3 +144,17 @@ solution:
           - image: lean-smoke.elf
             type: elf
       for-context: .Console+DevKit-E8
+    - cmake:
+        project-id: LeanBlinky
+        source: .
+        device: :M55_HP
+        configure:
+          - -DLEAN_PROFILE=Debug
+          - -DLEAN_APP=Blinky
+          - -DLEAN_BOARD=DevKit-E8
+          - -DLEAN_BOARD_LAYER=board/DevKit-E8/Board.clayer.yml
+          - -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi.cmake
+        images:
+          - image: lean-blinky.elf
+            type: elf
+      for-context: .Debug+DevKit-E8

@@ -20,6 +20,7 @@ layer:
     - component: Device:Startup
     - component: Device:SOC Peripherals:PINCONF
     - component: CMSIS Driver:USART
+    - component: CMSIS Driver:GPIO
     - component: CMSIS:CORE
   groups:
     - group: Lean board runtime

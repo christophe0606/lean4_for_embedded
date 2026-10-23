@@ -6,7 +6,7 @@
             "type": "gdbtarget",
             "request": "launch",
             "cwd": "${workspaceFolder}/",
-            "program": "out/LeanEmbedded/DevKit-E8/Console/lean-smoke.elf",
+            "program": "out/LeanBlinky/DevKit-E8/Debug/lean-blinky.elf",
             "gdb": "arm-none-eabi-gdb",
             "auxiliaryGdb": true,
             "preLaunchTask": "CMSIS Load",
@@ -46,7 +46,7 @@
             "type": "gdbtarget",
             "request": "attach",
             "cwd": "${workspaceFolder}/",
-            "program": "out/LeanEmbedded/DevKit-E8/Console/lean-smoke.elf",
+            "program": "out/LeanBlinky/DevKit-E8/Debug/lean-blinky.elf",
             "gdb": "arm-none-eabi-gdb",
             "auxiliaryGdb": true,
             "initCommands": [

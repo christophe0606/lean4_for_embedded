@@ -13,3 +13,7 @@ srcDir = "examples/smoke"
 [[lean_lib]]
 name = "Console"
 srcDir = "examples/console"
+
+[[lean_lib]]
+name = "Blinky"
+srcDir = "examples/blinky"
