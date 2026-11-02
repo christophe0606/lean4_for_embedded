@@ -25,43 +25,60 @@ The joystick center is active low. The GPIO driver treats output level `1` as LE
 
 [Blinky.lean](../examples/blinky/Blinky.lean) cycles the colors, owns the timing and pattern state, and prints pattern changes. `IO.asTask` runs the application on a dedicated Lean worker backed by an RTX thread. [Blinky/Board.lean](../examples/blinky/Blinky/Board.lean) creates the event flags, invokes the Lean GPIO/NVIC setup plans, selects the displayed color, and interprets button events. The initialized LEDs and armed button are stored in the private `Ready` capability.
 
-[Blinky/GPIO.lean](../examples/blinky/Blinky/GPIO.lean) performs LED setup and a closed, typed button setup sequence. [Blinky/NVIC.lean](../examples/blinky/Blinky/NVIC.lean) defines actions indexed by the CPU mask and NVIC line states, with brackets that establish those states while executing the actions. [Blinky/CMSISRTOS.lean](../examples/blinky/Blinky/CMSISRTOS.lean) exposes `EventFlags.new`, `set`, and `wait`, plus a button-event binding action that requires both gates closed. Its private-constructor `EventFlagsId` is a Lean value; Lean can replace the binding through `Board.replaceEvents`.
+[Blinky/GPIO.lean](../examples/blinky/Blinky/GPIO.lean) adds the LED roles and typed button setup sequence above the reusable [Board.GPIO](../api/Board/GPIO.lean) API. [Blinky/NVIC.lean](../examples/blinky/Blinky/NVIC.lean) specializes the shared [Board.NVIC](../api/Board/NVIC.lean) gate protocol to the joystick IRQ. The shared protocol indexes actions by the IRQ number and CPU/NVIC gate states. [Blinky/CMSISRTOS.lean](../examples/blinky/Blinky/CMSISRTOS.lean) uses the shared event-flags API, converts milliseconds to kernel ticks, and adds a button-event binding action that requires both gates closed. Its private-constructor `EventFlagsId` is a Lean value; Lean can replace the binding through `Board.replaceEvents`.
 
-[Blinky/HalError.lean](../examples/blinky/Blinky/HalError.lean) defines `HalM α = ExceptT HalError IO α`. GPIO and CMSIS-RTOS calls return `.gpio operation status` or `.rtos operation status`, preserving the raw numeric status. Resource exhaustion, dynamic state conflicts, and an unbound event sink have separate error constructors. The GPIO, NVIC, RTOS, board, and blink functions propagate these values through Lean `do` notation; callers can inspect them with `match ← action.run with | .ok value => ... | .error error => ...`. An event wait timeout is an ordinary `false` result. Only the exported application's `IO` boundary formats an unhandled `HalError` as an `IO.userError` for the C startup code.
+[Board/Error.lean](../api/Board/Error.lean), re-exported by Blinky, defines `HalM α = ExceptT HalError IO α`. GPIO and CMSIS-RTOS calls return `.gpio operation status` or `.rtos operation status`, preserving the raw numeric status. Resource exhaustion, dynamic state conflicts, and an unbound event sink have separate error constructors. The GPIO, NVIC, RTOS, board, and blink functions propagate these values through Lean `do` notation; callers can inspect them with `match ← action.run with | .ok value => ... | .error error => ...`. An event wait timeout is an ordinary `false` result. Only the exported application's `IO` boundary formats an unhandled `HalError` as an `IO.userError` for the C startup code.
 
-[main.c](../examples/blinky/main.c) handles board UART setup, RTX kernel startup, Lean runtime/module initialization, and task-manager startup. [hardware_bridge.c](../examples/blinky/hardware_bridge.c) maps the board pack's pin IDs and forwards elementary CMSIS GPIO, NVIC, and RTOS calls. Its button IRQ callback only sets an RTX event flag; it never calls the Lean runtime from interrupt context. Lean waits for that event with a timeout, so a press can change the pattern during either the on or off interval.
+[main.c](../examples/blinky/main.c) handles board UART setup, RTX kernel startup, Lean runtime/module initialization, and task-manager startup. The shared [Board API bridges](board-api.md) forward individual CMSIS GPIO, NVIC, CPU, and RTOS calls. [platform.c](../examples/blinky/platform.c) supplies board pin/IRQ identities, setup reservations, and the native event-slot adapter. Its button IRQ callback only sets an RTX event flag; it never calls the Lean runtime from interrupt context. Lean waits for that event with a timeout, so a press can change the pattern during either the on or off interval.
 
-### Enforced GPIO flow
+### Enforced GPIO operations
 
-The board API admits only `Color.red`, `Color.green`, `Color.blue` and `Speed.slow` or `Speed.fast`. GPIO pins form a closed Lean type with separate LED and button roles. Callers cannot pass an arbitrary GPIO number or set the button pin as an LED output. `Board.prepare : HalM Board.Ready` uses `GPIO.setupLeds` to initialize the six outputs in a fixed plan, then follows this typed button path:
+The board API admits only `Color.red`, `Color.green`, `Color.blue` and
+`Speed.slow` or `Speed.fast`. LED and button roles remain distinct, and each
+LED output is indexed by its exact pin. `Board.prepare` chooses this button flow:
 
 ```text
 create event flags → disable LPGPIO IRQ4 → mask CPU IRQs
-→ Driver_GPIO.Setup with callback → disable GPIO interrupt and LPGPIO IRQ4
-→ pull-up → input direction → falling edge
-→ mask CPU IRQs, clear GPIO and NVIC pending state, set priority
-→ unmask and enable GPIO interrupt → enable LPGPIO IRQ4
+→ Driver_GPIO.Setup with retained native callback object
+→ close GPIO source and LPGPIO IRQ4 before Setup returns
+→ pull-up → input direction → falling-edge selection
+→ attach source → EOI → clear NVIC pending state → set priority
+→ unmask and enable GPIO source → restore CPU mask → enable LPGPIO IRQ4
 ```
 
-`GPIO.ButtonState` and `GPIO.Button state` are Lean types: each private setup step requires the type returned by the previous step. Only `GPIO.prepareButton`, which finishes at `Button .enabled`, is public. The intermediate values cannot escape to application code or be replayed there. Each LED `Output` is indexed by its exact pin, so `GPIO.Leds` cannot be constructed with a red output in a green slot. `NVIC.GateM cpu line α` records the required gate states in the action's type. `NVIC.masked` and `NVIC.initializeLine` establish those states when executing it, so no copyable `Blocked` or `Disabled` token and no runtime `active` check are needed. `Board.display` and `Board.waitCenterPress` require `Ready`, returned only after setup succeeds.
+Every step uses public elementary checked operations from
+`Board.GPIO.LowLevel`, `Board.NVIC.LowLevel` and `Board.AlifGPIO.LowLevel`.
+Applications can compose the same primitives themselves. Pull-up may also be
+set after input direction; the selected driver does not require their displayed
+order. Callback setup, trigger selection and arming have distinct typed
+preconditions. The low-level functions enforce those preconditions without
+choosing the complete board flow.
 
-These ordering rules use indexed types and private constructors directly; they do not need separate theorems. A saved gated action remains safe to execute later because the mask/disable brackets are entered each time it runs. Lean values are not linear, so a type alone cannot prove that a global event object or hardware setup was used exactly once across arbitrary calls.
+The pack's GPIO Setup briefly enables the source and NVIC line internally.
+Its trusted callback/source adapter closes both under PRIMASK, including on
+failure. Gated actions require the matching IRQ and CPU/NVIC scopes when
+executed; there is no public unrestricted lift that can bypass those gates.
+PRIMASK is restored on both HAL errors and IO exceptions. Initialization enables
+the NVIC line only after success.
 
-The pack's GPIO `Setup` enables its interrupt before returning. `NVIC.masked` briefly masks configurable CPU interrupts while Lean calls Setup and closes both gates again. The previous PRIMASK is restored even if a typed HAL error occurs. The pull-up, direction, and edge calls run afterward with the specific NVIC line disabled. A second short guarded block clears pending state and enables the GPIO source; `NVIC.initializeLine` enables the NVIC line only after the whole setup action succeeds. The event ID is created by Lean after the kernel starts and handed to the C ISR at callback setup.
+Private constructors and indices enforce resource roles and state at compile
+time. Hidden runtime leases reject duplicate setup, stale copies after a
+transition, conflicting operations, and use after deletion. Failed mutations
+reserve the uncertain resource until reset. The registry is shared with the
+reusable API, rather than relying on a private demo setup path.
 
-The gate state belongs to the *action*, not a token claiming that hardware is currently masked. A saved action can be run again, but each run enters a fresh mask/disable bracket. `GateM.fromHal` is the trusted adapter for elementary HAL actions that preserve the stated gate state; the FFI and other firmware remain outside Lean's proof. The C adapter checks actual PRIMASK, NVIC, kernel state, and repeated setup at the boundary.
+The native ISR slot holds the event ID and its retention token. Rebinding under
+closed CPU/NVIC gates retains the new object before publishing it and releases
+the detached object's retention afterward. The checked event-flags API rejects
+deletion while an ISR retention or active wait exists. `Board.replaceEvents`
+also rejects replacement during its owner's active wait and returns the old
+object for deletion. Raw event-ID recovery and native slot access are internal.
 
-| Validation | Where it happens now |
-| --- | --- |
-| Pin role, button setup order, and the gates required by each step | Lean types and private setup steps, at compile time |
-| A partially configured LED used as an output, or a caller choosing a duplicate LED within one setup | Impossible through the public Lean API; only the fixed `setupLeds` plan returns the six outputs |
-| Driver/RTOS failure, event allocation, or dynamically supplied flag bits | Runtime status or value check |
-| A second hardware setup, concurrent button wait/rebind, or rebinding the same event object | Runtime check; these depend on call history or concurrent activity |
-| Hardware changed by C, another core, or another thread | C boundary checks or hardware status; Lean's action types cannot establish external ownership |
-
-The ISR requires a persistent C event-ID slot because the CMSIS GPIO callback has no user context pointer. `Board.waitCenterPress` now reads that same slot before waiting; it does not keep a second copy in `Ready`. `Board.replaceEvents` changes the slot from Lean while CPU delivery and LPGPIO IRQ4 are disabled, clears pending state, and returns the old ID. It rejects a replacement during an active wait. The caller can delete the detached old object with `EventFlags.delete`; the C adapter rejects deletion of the currently bound object. The normal blinking loop does not rebind.
-
-The joystick is active low, so its falling edge signals a press. `waitCenterPress` consumes the RTX event in Lean; the application accepts at most one change per 200 ms to suppress contact bounce. GPIO multiplexing and ownership still depend on board configuration and other firmware: the Alif device documentation says pins can have only one assigned function and LPGPIO access across bus masters needs serialization (ASRM0002 v1.8 p.53; ADTS0013 v1.2 pp.52–53). These Lean capabilities cannot rule out a second core or unrelated C code changing the same hardware.
+The joystick is active low, so a falling edge signals a press. Lean accepts at
+most one change per 200 ms. The trusted board adapter establishes native
+pointer, pin, port, IRQ and callback mappings. Other cores and native firmware
+must honor ownership; these checks cannot prevent unrelated register writes.
+See [the shared API guide](board-api.md) for the exact scope and lifetime rules.
 
 ## Build and run
 
@@ -70,9 +87,17 @@ The joystick is active low, so its falling edge signals a press. `waitCenterPres
 3. Set SW4 to UART4 with power off, then open the board's UART at 115200 8N1. On the tested setup it enumerated as COM5.
 4. Resume from the initial `main` breakpoint. The UART prints `Lean Blinky: RGB0 and RGB1, slow pattern (1000 ms)` and the joystick instruction. Press the joystick center firmly for about half a second and release it; the UART reports the new pattern.
 
-The board startup, MRAM linker layout, UART4 retargeting, and RTX runtime are shared with the existing E8 target sets. The [Blinky cproject](../examples/blinky/LeanBlinky.cproject.yml) includes the [board layer](../board/DevKit-E8/Board.clayer.yml) and shared Lean CMSIS layer, adds the GPIO component, and compiles `main.c` and `hardware_bridge.c`. Its dependent `LeanBlinkyLib` CMake project builds only the Lean archive.
+The board startup, MRAM linker layout, UART4 retargeting, and RTX runtime are shared with the existing E8 target sets. The [Blinky cproject](../examples/blinky/LeanBlinky.cproject.yml) includes the [board layer](../board/DevKit-E8/Board.clayer.yml) and shared Lean CMSIS layer, adds the GPIO component, and compiles `main.c`, `platform.c`, and the selected per-component bridges from `api/c/`. Its dependent `LeanBlinkyLib` CMake project builds only the Lean archive.
 
 ## Verification
+
+For the shared low-level invariant changes on 2026-11-02, the Lean checks
+passed 38 compilation cases and 84 native signature comparisons. Eight host
+runtime test groups and the native lease registry tests passed. DevKit-E8 Blinky
+built, loaded and printed the
+normal startup instructions after GPIO and IRQ setup completed; the target
+was left running. No physical joystick press or event-object rebinding was
+performed for this version. The records below describe earlier iterations.
 
 On the DevKit-E8 A1 with ULINKplus, the refactored standalone project built, loaded, and printed the Lean startup instructions. The debugger observed the Lean worker waiting on an RTX event flag. A joystick press entered `button_irq` with pin 124 and falling-edge event 2; after the callback posted the flag and execution resumed, Lean changed the blink pattern. With no breakpoint active, another press changed the LEDs and UART reported `Blinky: fast pattern (100 ms)`. The final rebuilt image also changed from slow to fast on a firm press, confirmed by the board operator and UART. One earlier press after loading that image did not register; button response remains intermittent on this board. The separate `DevKit-E8@minimal` target was not changed by this refactor.
 

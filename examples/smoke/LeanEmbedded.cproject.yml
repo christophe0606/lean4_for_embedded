@@ -6,6 +6,7 @@ project:
   layers:
     - layer: $Board-Layer$
     - layer: ../../runtime/Lean.clayer.yml
+    - layer: ../../api/Core.clayer.yml
   add-path:
     - $OutDir(LeanSmokeLib)$/generated
     - $OutDir(LeanSmokeLib)$/upstream/include

@@ -10,7 +10,7 @@ Cross-compile Lean applications with the **stock Lean 4.35.0 compiler and Lake**
 
 The Lean compiler is not rebuilt. The runtime comes from the exact matching upstream commit in [upstream.json](upstream.json). Threading stays enabled: the upstream task scheduler runs on real RTX threads, with per-thread runtime state, blocking synchronization, and thread finalization.
 
-The minimal examples select ten Lean modules: the application, two modules in a local hardware-contract Lake dependency, and seven small `Init` modules (including `Init.Core` and list notation for the sequence proof). There is no blanket `import Init`, no full Lean standard-library archive, and no fake `initialize_Init` function. Real module initializers run; unused C functions are removed at link time.
+The minimal examples select eleven Lean modules: the application, the shared Board.SysTick.Config facade, two modules in a local hardware-contract Lake dependency, and seven small `Init` modules (including `Init.Core` and list notation for the sequence proof). There is no blanket `import Init`, no full Lean standard-library archive, and no fake `initialize_Init` function. Real module initializers run; unused C functions are removed at link time.
 
 ## Build and run in VS Code
 
@@ -41,7 +41,7 @@ The installed VM FVP has no GDBServer plugin. **Run is verified; Load & Debug is
 
 Select the `console` target set (`Corstone300-CLANG@console` or `Corstone300-GCC@console`) and use Build/Run. This selects the `Console` build type and adds `examples/console/Console.lean`. It runs ordinary `Task.spawn`/`Task.map`, `IO.sleep`, and `IO.println` using the same stock Lean compiler and RTX runtime.
 
-The larger `Init.System.IO` dependency closure is opt-in. Its code uses the FVP's 1 MiB secure SRAM code region, with boot vectors in ITCM. The minimal default uses ten Lean modules and 512 KiB ITCM for code. After running both profiles with both compilers, verify all four images with:
+The larger `Init.System.IO` dependency closure is opt-in. Its code uses the FVP's 1 MiB secure SRAM code region, with boot vectors in ITCM. The minimal default uses eleven Lean modules and 512 KiB ITCM for code. After running both profiles with both compilers, verify all four images with:
 
 ```sh
 python3 scripts/verify-evidence.py --console
@@ -60,6 +60,11 @@ The HP image links at MRAM `0x80200000`; its RAM allocations use SRAM0 `0x020000
 For output, power the board through **PRG USB** and move SW4 to **UART4** with power off. Open the resulting serial port at **115200 8N1** before running the image. The minimal profile prints the eight PASS markers; the console profile additionally exercises stock Lean `IO.println`. The UART selection and ATOC setup follow the Alif E8 DevKit User Guide (AUGD0023 v1.2, pp. 3-7).
 
 ## Develop a Lean application
+
+Reusable hardware bindings are in the [`Board` library](docs/board-api.md):
+per-component C bridges and checked low-level Lean primitives. Convenience
+functions compose those primitives; Blinky supplies its board policy;
+Smoke uses the shared pure SysTick contracts.
 
 Edit `examples/smoke/Smoke.lean` and build through CMSIS. Lean elaboration, proof checking, C generation, and native compilation are all part of the build. Lake warnings are errors, including uses of `sorry`.
 

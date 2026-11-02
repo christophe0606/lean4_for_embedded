@@ -17,3 +17,7 @@ srcDir = "examples/console"
 [[lean_lib]]
 name = "Blinky"
 srcDir = "examples/blinky"
+
+[[lean_lib]]
+name = "Board"
+srcDir = "api"

@@ -1,0 +1,8 @@
+layer:
+  description: Shared Lean bridge for a board-selected CMSIS Driver USART
+  add-path:
+    - ./c
+  groups:
+    - group: Board USART API bridge
+      files:
+        - file: c/bridge_usart.c

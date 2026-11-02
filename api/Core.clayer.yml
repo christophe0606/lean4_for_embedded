@@ -1,0 +1,13 @@
+layer:
+  description: Shared Lean bridges for CMSIS core and RTOS2 APIs
+  add-path:
+    - ./c
+  groups:
+    - group: Board core API bridges
+      files:
+        - file: c/bridge_resource.c
+        - file: c/resource_state.c
+        - file: c/bridge_cpu.c
+        - file: c/bridge_nvic.c
+        - file: c/bridge_cmsisrtos.c
+        - file: c/bridge_systick.c

@@ -47,7 +47,7 @@ file(MAKE_DIRECTORY "${GEN}")
 find_program(LAKE_EXECUTABLE lake REQUIRED HINTS "$ENV{ELAN_HOME}/bin")
 file(GLOB_RECURSE LEAN_PACKAGE_INPUTS CONFIGURE_DEPENDS
   "${CMAKE_SOURCE_DIR}/examples/*.lean" "${CMAKE_SOURCE_DIR}/examples/*lakefile.toml"
-  "${CMAKE_SOURCE_DIR}/lean/*.lean")
+  "${CMAKE_SOURCE_DIR}/api/*.lean")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   "${CMAKE_SOURCE_DIR}/lakefile.toml" "${CMAKE_SOURCE_DIR}/scripts/lean-sources.py" ${LEAN_PACKAGE_INPUTS})
 set(LEAN_APP "Smoke" CACHE STRING "Firmware application")

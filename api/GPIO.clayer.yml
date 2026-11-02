@@ -1,0 +1,10 @@
+layer:
+  description: Shared Lean bridge for CMSIS Driver GPIO
+  components:
+    - component: CMSIS Driver:GPIO
+  add-path:
+    - ./c
+  groups:
+    - group: Board GPIO API bridge
+      files:
+        - file: c/bridge_gpio.c

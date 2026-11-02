@@ -1,6 +1,7 @@
 module
 prelude
 public import Blinky.GPIO
+import Board.Internal.NVIC
 
 /-! Board policy is implemented in Lean. The lower layers expose individual
 CMSIS operations, while their capabilities and state types enforce the legal
@@ -53,11 +54,11 @@ returned to the caller; rebinding is for the owner task between waits. -/
 def replaceEvents (ready : Ready) (newEvents : CMSISRTOS.EventFlagsId) :
     HalM CMSISRTOS.EventFlagsId := do
   NVIC.runOpen <| NVIC.masked <| NVIC.temporarilyDisabled do
-    if ← NVIC.GateM.fromHal (fromIO ready.waiting.get) then
-      NVIC.GateM.fromHal (throw (.invalidState "cannot replace button events during a wait"))
-    let oldEvents ← NVIC.GateM.fromHal CMSISRTOS.ButtonEventSink.current
-    if oldEvents.toUInt32 == newEvents.toUInt32 then
-      NVIC.GateM.fromHal (throw (.invalidState "replacement event ID is already bound"))
+    if ← Board.Internal.NVIC.lift (fromIO ready.waiting.get) then
+      Board.Internal.NVIC.lift (throw (.invalidState "cannot replace button events during a wait"))
+    let oldEvents ← Board.Internal.NVIC.lift CMSISRTOS.ButtonEventSink.current
+    if oldEvents.toUSize == newEvents.toUSize then
+      Board.Internal.NVIC.lift (throw (.invalidState "replacement event ID is already bound"))
     GPIO.clearPending ready.button
     NVIC.clearPendingIRQ
     CMSISRTOS.ButtonEventSink.bind newEvents
@@ -87,10 +88,10 @@ def display (ready : Ready) (color : Option Color) : HalM Unit := do
 def waitCenterPress (ready : Ready) (speed : Speed) : HalM Bool := do
   let _ := ready.button
   let events ← NVIC.runOpen <| NVIC.masked do
-    if ← NVIC.GateM.fromHal (fromIO ready.waiting.get) then
-      NVIC.GateM.fromHal (throw (.invalidState "button event wait is already active"))
-    let events ← NVIC.GateM.fromHal CMSISRTOS.ButtonEventSink.current
-    NVIC.GateM.fromHal (fromIO (ready.waiting.set true))
+    if ← Board.Internal.NVIC.lift (fromIO ready.waiting.get) then
+      Board.Internal.NVIC.lift (throw (.invalidState "button event wait is already active"))
+    let events ← Board.Internal.NVIC.lift CMSISRTOS.ButtonEventSink.current
+    Board.Internal.NVIC.lift (fromIO (ready.waiting.set true))
     return events
   try
     CMSISRTOS.EventFlags.wait events CMSISRTOS.Flags.buttonPress speed.period

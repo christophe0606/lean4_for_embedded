@@ -6,9 +6,12 @@ project:
   layers:
     - layer: $Board-Layer$
     - layer: ../../runtime/Lean.clayer.yml
-  components:
-    - component: CMSIS Driver:GPIO
+    - layer: ../../api/Core.clayer.yml
+    - layer: ../../api/GPIO.clayer.yml
+    - layer: ../../api/Alif.clayer.yml
+    - layer: ../../api/USART.clayer.yml
   add-path:
+    - ../../api/c
     - $OutDir(LeanBlinkyLib)$/generated
     - $OutDir(LeanBlinkyLib)$/upstream/include
     - $OutDir(LeanBlinkyLib)$/upstream
@@ -16,7 +19,7 @@ project:
     - group: Application
       files:
         - file: main.c
-        - file: hardware_bridge.c
+        - file: platform.c
     - group: Lean library
       files:
         - file: $lib(LeanBlinkyLib)$

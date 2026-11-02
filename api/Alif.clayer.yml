@@ -1,0 +1,9 @@
+layer:
+  description: Shared Lean bridges for Alif GPIO interrupts and pin configuration
+  add-path:
+    - ./c
+  groups:
+    - group: Board Alif API bridges
+      files:
+        - file: c/bridge_alifgpio.c
+        - file: c/bridge_pinconfig.c
