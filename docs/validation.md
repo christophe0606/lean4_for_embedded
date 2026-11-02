@@ -17,7 +17,7 @@ The required checks are:
 
 The minimal profile requires eight PASS markers. The optional Console profile additionally runs Lean-written `Task.spawn`/`Task.map`, `IO.sleep`, and `IO.println`; its ninth PASS marker confirms that normal Lean console code executed. Both Console images are also checked against their current ELF and FVP configuration hashes.
 
-The host compiler and runtime source commit are pinned to `eb6cafb7290e8bd5f2937522d8d804f58f02bafc` (Lean 4.35.0). The target compiler versions are GCC 14.3.1 and ATfE 23.1.0. The selected minimal Lean closure is ten modules, listed in each target's `generated/modules.txt`.
+The host compiler and runtime source commit are pinned to `eb6cafb7290e8bd5f2937522d8d804f58f02bafc` (Lean 4.35.0). The target compiler versions are GCC 14.3.1 and ATfE 23.1.0. The selected minimal Lean closure is ten modules, listed in `out/LeanSmokeLib/<target>/Debug/generated/modules.txt`.
 
 This verifies the model execution and listed behaviors, not physical board timing, worst-case interrupt latency, every runtime API, or GDB debugging on the old VM model. The runtime support table records those limits explicitly.
 

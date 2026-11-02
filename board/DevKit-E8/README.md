@@ -7,7 +7,7 @@ camera, display, Ethernet, USB, and secure service components. This project uses
 the pack's Device:Startup and CMSIS USART4 driver with a small board-specific
 runtime instead. `RTE/Device/AE822FA0E5597LS0_M55_HP` contains the pack's
 configured headers needed by that startup and driver (original Alif notices are
-preserved). Pack source files are referenced from CMake and are not vendored.
+preserved). Pack source files are selected by CMSIS components and are not vendored.
 
 `memory.ld` places the HP image in the pack's default 2 MiB HP MRAM slice at
 `0x80200000` and confines data, heap, and stack to 4 MiB SRAM0 at `0x02000000`.
@@ -15,8 +15,9 @@ preserved). Pack source files are referenced from CMake and are not vendored.
 at 115200 baud. The board's PRG USB switch SW4 must select UART4 (Alif E8
 DevKit User Guide AUGD0023 v1.2, pp. 4, 7).
 
-The firmware is a native CMake project in the CMSIS solution. CMSIS-Toolbox
-2.15 does not attach a `.clayer.yml` component graph to a native `cmake:`
-project. The target passes this layer path to CMake, and the board source and
-component selection in `CMakeLists.txt` mirrors it. The layer remains usable
-as a reference for conversion to an RTE-managed `.cproject.yml`.
+The example cprojects include this board layer directly. CMSIS resolves and builds
+Device:Startup, PINCONF and USART from the Ensemble pack and generates
+`RTE_Components.h` for each context. Blinky selects the additional GPIO component.
+The configured device headers stay in this layer's `RTE/Device` directory.
+The shared `runtime/Lean.clayer.yml` selects RTX source and its configuration;
+CMake builds only the Lean library linked by each example.

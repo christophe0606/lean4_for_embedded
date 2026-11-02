@@ -6,6 +6,18 @@ layer:
   device: :M55_HP
   processor:
     trustzone: off
+  define:
+    - LEAN_BOARD_ALIF_E8
+    - RTSS_HP
+    - ENSEMBLE_SOC_GEN2
+    - AE822FA0E5597LS0
+  add-path:
+    - $Pack(AlifSemiconductor::Ensemble)$/Boards/DevKit-e8
+  linker:
+    - script: memory.ld
+  misc:
+    - for-compiler: GCC
+      Link: [--specs=nosys.specs]
   packs:
     - pack: AlifSemiconductor::Ensemble@2.2.1
     - pack: ARM::CMSIS@6.3.0
@@ -20,14 +32,9 @@ layer:
     - component: Device:Startup
     - component: Device:SOC Peripherals:PINCONF
     - component: CMSIS Driver:USART
-    - component: CMSIS Driver:GPIO
     - component: CMSIS:CORE
   groups:
     - group: Lean board runtime
       files:
         - file: ./start.c
         - file: ./stdio.c
-        - file: ./memory.ld
-  # The native CMake project consumes this layer path and compiles the matching
-  # components directly from the installed packs. CMSIS-Toolbox 2.15 does not
-  # attach .clayer files to a native cmake: project.

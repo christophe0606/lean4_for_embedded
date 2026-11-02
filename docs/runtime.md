@@ -2,7 +2,7 @@
 
 ## Build boundaries
 
-`LeanEmbedded.csolution.yml` selects GCC or CLANG and delegates the native project to CMake. `scripts/lean-sources.py` asks stock Lake for package modules' C facets and generates matching built-in module C from the pinned Lean source. The generated manifest contains the selected runtime import closure. Explicit meta imports are omitted for module-system roots; legacy modules retain their full initializer dependencies. Local source changes and Lake configuration changes trigger regeneration.
+`LeanEmbedded.csolution.yml` selects GCC or CLANG and builds the example cproject with its board and Lean CMSIS layers. CMake builds only the dependent Lean archive; CMSIS builds the startup, drivers, RTX, platform adapters and C entry point, then links the ELF. `scripts/lean-sources.py` asks stock Lake for package modules' C facets and generates matching built-in module C from the pinned Lean source. The generated manifest contains the selected runtime import closure. Explicit meta imports are omitted for module-system roots; legacy modules retain their full initializer dependencies. Local source changes and Lake configuration changes trigger regeneration.
 
 Module-system roots use their real `runtime_initialize_*` entry point. This avoids running elaborator-side metaprogram initializers on the MCU. Legacy modules fall back to their actual `initialize_*` entry point. Every selected initializer is linked; there are no successful placeholder module initializers.
 
@@ -61,7 +61,7 @@ The GCC newlib build keeps its ordinary shared reentrancy state/errno. Its heap 
 
 The FVP has one CPU. `hardware_concurrency()` correctly reports one; the validation deliberately requests two Lean workers to test concurrency. This gives concurrency, not parallel execution or hard real-time guarantees. Workers use normal RTX priority. Busy retry paths inherited from upstream assume that the thread making progress can be scheduled; avoid higher-priority callers spinning on lower-priority Lean work.
 
-The default example reserves a 128 KiB RTX pool, 192 KiB C heap, and 16 KiB initial MSP stack. The application RTX thread uses 32 KiB and worker threads 16 KiB. These are explicit demonstration budgets in CMake/linker/startup files, not minimum RAM requirements for Lean. Dedicated tasks and nested waits may create extra workers and exhaust the pool; allocation errors terminate explicitly.
+The default example reserves a 128 KiB RTX pool, 192 KiB C heap, and 16 KiB initial MSP stack. The application RTX thread uses 32 KiB and worker threads 16 KiB. These are explicit demonstration budgets in the Lean CMSIS layer, linker scripts and startup files, not minimum RAM requirements for Lean. Dedicated tasks and nested waits may create extra workers and exhaust the pool; allocation errors terminate explicitly.
 
 Monotonic time extends the 32-bit RTX tick count when sampled. For multi-wrap uptime accuracy it must be sampled at least once per full tick wrap (about 49.7 days at 1 kHz). Nanosecond values have tick resolution, not nanosecond hardware precision.
 

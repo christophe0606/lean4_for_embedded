@@ -24,8 +24,8 @@ The workspace manifest selects the installed CMSIS-Toolbox, CMake, Ninja, GCC, a
 
    This makes a shallow clone under `.reference/lean4`. It installs no Nix and builds no host compiler.
 
-2. Open [LeanEmbedded.csolution.yml](LeanEmbedded.csolution.yml) in the CMSIS Solution extension. Activate the environment in `vcpkg-configuration.json` if prompted. The required packs are CMSIS 6.3.0, CMSIS-RTX 5.9.1, and the MPS3 SSE-300 BSP 1.4.0.
-3. Select the `minimal` target set on `Corstone300-CLANG` or `Corstone300-GCC`, then **Build**. CMSIS-Toolbox 2.15 orchestrates the native CMake project; CMake invokes Lake, cross-compiles its generated C and the runtime, and links the firmware.
+2. Open [LeanEmbedded.csolution.yml](LeanEmbedded.csolution.yml) in the CMSIS Solution extension. Activate the environment in `vcpkg-configuration.json` if prompted. The required packs are CMSIS 6.3.0, CMSIS-RTX 5.9.1, and the MPS3 SSE-300 BSP 1.5.0 (the CMSIS 6-compatible release).
+3. Select the `minimal` target set on `Corstone300-CLANG` or `Corstone300-GCC`, then **Build**. CMSIS-Toolbox builds the example cproject and its CMSIS components. A dependent CMake library invokes Lake and cross-compiles the Lean runtime and generated C; the cproject compiles the C entry point and links the firmware.
 4. Select **Run** / **Load + Run**. The Arm-FVP adapter invokes `scripts/fvp-model.py`, which copies the ELF into the shared folder and executes the model **inside the VM** over the `linuxvm` SSH identity.
 5. Repeat for the other compiler. Validate the two current images with:
 
@@ -53,7 +53,7 @@ Standard-module generated C is cached under `.build/lean-c/<commit>` and reused 
 
 The standalone Lean RGB Blinky project is described in [docs/blinky.md](docs/blinky.md). Select `DevKit-E8@blinky` to build and run only that example.
 
-Select `DevKit-E8@minimal` or `DevKit-E8@console` in the CMSIS Solution view. Both use the M55_HP core of the `AE822FA0E5597LS0` device on the DevKit-E8 A1 board and `AlifSemiconductor::Ensemble@2.2.1`. The board files and pack-derived configuration are in [board/DevKit-E8](board/DevKit-E8). The native CMake image consumes that board selection and builds the Alif startup, UART4 driver, and RTX from their installed packs. CMSIS-Toolbox 2.15 does not process a `.clayer.yml` as a component graph for a native `cmake:` project, so the CMake board source list mirrors this layer.
+Select `DevKit-E8@minimal` or `DevKit-E8@console` in the CMSIS Solution view. Both use the M55_HP core of the `AE822FA0E5597LS0` device on the DevKit-E8 A1 board and `AlifSemiconductor::Ensemble@2.2.1`. The board files and pack-derived configuration are in [board/DevKit-E8](board/DevKit-E8). The example cprojects include the board layer to select the Alif startup and UART4 driver from their installed pack. The shared [Lean CMSIS layer](runtime/Lean.clayer.yml) selects RTX and compiles the platform adapters. Blinky additionally selects the GPIO driver.
 
 The HP image links at MRAM `0x80200000`; its RAM allocations use SRAM0 `0x02000000` to `0x023fffff`. Before loading, provision the board's application table of contents (ATOC) for M55_HP using the Alif Security Toolkit. Select the connected `ULINKplus@pyOCD` debugger in CMSIS View, build, then use **Load & Debug** or **Load & Run**. The pack supplies the MRAM flash algorithm.
 
@@ -120,7 +120,9 @@ The reusable implementation and proofs live in [TimerSequence.lean](examples/har
 
 See [runtime design and capability limits](docs/runtime.md), [the proved SysTick reload](docs/proof-example.md), [the proved initialization sequence](docs/initialization-example.md), and [validation](docs/validation.md). This is a core runtime port for a single Cortex-M55, not a POSIX environment or an entire Lean compiler running on the MCU.
 
-The native CMake project is deliberately used as a first-class `cmake:` entry in a standard csolution. Board, compiler, pack, build, and Run selection remain in the CMSIS UI. Startup and RTX sources are selected by CMake from the pinned packs; this project does not present them as a separate RTE-managed `.cproject.yml` component graph.
+Each C application has its own cproject: [LeanEmbedded](examples/smoke/LeanEmbedded.cproject.yml) for smoke/console and [LeanBlinky](examples/blinky/LeanBlinky.cproject.yml) for Blinky. The projects own `main.c`, C/C++ platform adapters, CMSIS components, and ELF linking. Board layers own startup, drivers, and linker scripts; the shared Lean CMSIS layer selects RTX source and its configuration.
+
+CMake only prepares the patched upstream Lean runtime, invokes Lake, and compiles the selected Lean module closure into `liblean.a`. The csolution selects `LeanSmokeLib` or `LeanBlinkyLib` as a library dependency with `load: none`. Each cproject references it through `$lib(...)$` and obtains generated headers through `$OutDir(...)$`, so CMSIS orders the library build before application compilation. CMake receives only the RTOS2 API header path from the solution and contains no board, driver, RTX source, or firmware linker selection.
 
 ## License and source provenance
 

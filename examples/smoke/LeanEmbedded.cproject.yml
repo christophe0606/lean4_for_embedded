@@ -1,0 +1,27 @@
+project:
+  description: Lean smoke tests and optional console example
+  output:
+    base-name: lean-smoke
+    type: [elf, map]
+  layers:
+    - layer: $Board-Layer$
+    - layer: ../../runtime/Lean.clayer.yml
+  add-path:
+    - $OutDir(LeanSmokeLib)$/generated
+    - $OutDir(LeanSmokeLib)$/upstream/include
+    - $OutDir(LeanSmokeLib)$/upstream
+  setups:
+    - setup: Standard Lean console
+      for-context: .Console
+      define:
+        - LEAN_CONSOLE_EXAMPLE
+  groups:
+    - group: Application
+      files:
+        - file: main.c
+        - file: systick.c
+        - file: timer_sequence.c
+        - file: ../../runtime/selftest.cpp
+    - group: Lean library
+      files:
+        - file: $lib(LeanSmokeLib)$

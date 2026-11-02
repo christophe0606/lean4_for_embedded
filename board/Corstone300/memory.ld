@@ -1,4 +1,4 @@
-/* Cortex-M55 secure ITCM and DTCM aliases from ARM BSP 1.4.0 pdsc.
+/* Cortex-M55 secure ITCM and DTCM aliases from ARM BSP 1.5.0 pdsc.
  * Layout follows the BSP GNU linker script, with ARM TLS added. */
 ENTRY(Reset_Handler)
 MEMORY {
@@ -36,11 +36,13 @@ SECTIONS {
   } > RAM :NONE
   .stack (NOLOAD) : ALIGN(8) {
     __StackLimit = .; . += 16K; __StackTop = .;
+    . += 8; /* CMSIS secure startup writes the two-word stack seal here. */
   } > RAM :NONE
   PROVIDE(__stack = __StackTop);
   PROVIDE(__stack_limit = __StackLimit);
   PROVIDE(__heap_start = __HeapBase);
   PROVIDE(__heap_end = __HeapLimit);
   PROVIDE(__StackSeal = __StackTop);
-  ASSERT(__StackTop <= ORIGIN(RAM) + LENGTH(RAM), "RAM overflow")
+  PROVIDE(__stack_seal = __StackTop);
+  ASSERT(__StackTop + 8 <= ORIGIN(RAM) + LENGTH(RAM), "RAM overflow")
 }

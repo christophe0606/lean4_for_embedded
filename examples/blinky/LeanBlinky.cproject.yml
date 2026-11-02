@@ -1,0 +1,22 @@
+project:
+  description: Lean RGB Blinky on DevKit-E8 M55_HP
+  output:
+    base-name: lean-blinky
+    type: [elf, map]
+  layers:
+    - layer: $Board-Layer$
+    - layer: ../../runtime/Lean.clayer.yml
+  components:
+    - component: CMSIS Driver:GPIO
+  add-path:
+    - $OutDir(LeanBlinkyLib)$/generated
+    - $OutDir(LeanBlinkyLib)$/upstream/include
+    - $OutDir(LeanBlinkyLib)$/upstream
+  groups:
+    - group: Application
+      files:
+        - file: main.c
+        - file: hardware_bridge.c
+    - group: Lean library
+      files:
+        - file: $lib(LeanBlinkyLib)$

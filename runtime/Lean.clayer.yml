@@ -1,0 +1,35 @@
+layer:
+  description: CMSIS adapters for the Lean runtime
+  language-C: c11
+  language-CPP: c++20
+  optimize: size
+  define:
+    - LEAN_CMSIS
+    - LEAN_MULTI_THREAD
+    - __PROGRAM_START: embedded_start
+    - OS_DYNAMIC_MEM_SIZE: 131072
+    - OS_STACK_SIZE: 16384
+    - OS_TIMER_THREAD_STACK_SIZE: 2048
+    - OS_STACK_CHECK: 1
+  add-path:
+    - ./include
+    - .
+  components:
+    - component: CMSIS:RTOS2:Keil RTX5&Source
+    - component: CMSIS:OS Tick:SysTick
+  misc:
+    - for-compiler: GCC
+      C: [-fpermitted-flt-eval-methods=c11]
+      CPP: [-fpermitted-flt-eval-methods=c11, -fno-use-cxa-atexit]
+    - for-compiler: CLANG
+      CPP: [-fno-use-cxa-atexit]
+    - Link: [-nostartfiles, '-Wl,--gc-sections', '-Wl,-u,__retarget_lock_acquire,-u,__cxa_guard_acquire']
+  groups:
+    - group: CMSIS Lean adapters
+      files:
+        - file: platform.cpp
+        - file: cmsis_thread.cpp
+        - file: cmsis_tls.cpp
+        - file: cmsis_tp.S
+        - file: cmsis_libc.cpp
+        - file: cmsis_console.cpp

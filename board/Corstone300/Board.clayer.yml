@@ -1,0 +1,23 @@
+layer:
+  type: Board
+  description: Corstone-300 FVP startup and semihosting
+  processor:
+    trustzone: secure-only
+  components:
+    - component: CMSIS:CORE
+    - component: Device:Startup&C Startup
+  linker:
+    - script: memory.ld
+      for-context: .Debug
+    - script: memory-console.ld
+      for-context: .Console
+  misc:
+    - for-compiler: GCC
+      Link: [--specs=rdimon.specs]
+    - for-compiler: CLANG
+      Library: [semihost]
+  groups:
+    - group: Board runtime
+      files:
+        - file: start.c
+        - file: fault.c

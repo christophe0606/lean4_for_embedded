@@ -70,7 +70,7 @@ The joystick is active low, so its falling edge signals a press. `waitCenterPres
 3. Set SW4 to UART4 with power off, then open the board's UART at 115200 8N1. On the tested setup it enumerated as COM5.
 4. Resume from the initial `main` breakpoint. The UART prints `Lean Blinky: RGB0 and RGB1, slow pattern (1000 ms)` and the joystick instruction. Press the joystick center firmly for about half a second and release it; the UART reports the new pattern.
 
-The board startup, MRAM linker layout, UART4 retargeting, and RTX runtime are shared with the existing E8 target sets. The native CMake project mirrors the [board layer](../board/DevKit-E8/Board.clayer.yml); CMSIS-Toolbox 2.15 does not attach `.clayer.yml` components directly to a native `cmake:` project.
+The board startup, MRAM linker layout, UART4 retargeting, and RTX runtime are shared with the existing E8 target sets. The [Blinky cproject](../examples/blinky/LeanBlinky.cproject.yml) includes the [board layer](../board/DevKit-E8/Board.clayer.yml) and shared Lean CMSIS layer, adds the GPIO component, and compiles `main.c` and `hardware_bridge.c`. Its dependent `LeanBlinkyLib` CMake project builds only the Lean archive.
 
 ## Verification
 

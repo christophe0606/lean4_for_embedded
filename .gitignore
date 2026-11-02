@@ -13,3 +13,6 @@ build/
 .clangd
 __pycache__/
 *.pyc
+*.base@*
+# Per-context CMSIS-generated component headers (configuration files stay tracked).
+examples/*/RTE/_*/
